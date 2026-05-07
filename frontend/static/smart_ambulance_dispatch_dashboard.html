@@ -1,0 +1,509 @@
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--c-bg:var(--color-background-primary);--c-surface:var(--color-background-secondary);--c-border:var(--color-border-tertiary);--c-text:var(--color-text-primary);--c-muted:var(--color-text-secondary);--r:var(--border-radius-md);--rl:var(--border-radius-lg)}
+body{font-family:var(--font-sans);color:var(--c-text)}
+.dash{padding:1rem 0}
+.topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem}
+.title-block h1{font-size:18px;font-weight:500;letter-spacing:-0.3px}
+.title-block p{font-size:12px;color:var(--c-muted);margin-top:2px}
+.status-pill{display:inline-flex;align-items:center;gap:6px;font-size:12px;padding:4px 10px;border-radius:20px;background:var(--color-background-success);color:var(--color-text-success);font-weight:500}
+.pulse{width:7px;height:7px;border-radius:50%;background:var(--color-text-success);animation:pulse 1.4s ease infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(0.8)}}
+.tabs{display:flex;gap:2px;border-bottom:0.5px solid var(--c-border);margin-bottom:1rem}
+.tab{padding:7px 14px;font-size:13px;cursor:pointer;border:none;background:none;color:var(--c-muted);border-bottom:2px solid transparent;margin-bottom:-1px;border-radius:0;transition:color .15s}
+.tab.active{color:var(--c-text);border-bottom-color:var(--c-text);font-weight:500}
+.tab:hover{color:var(--c-text)}
+.panel{display:none}.panel.active{display:block}
+.grid-4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:1rem}
+.grid-2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-bottom:1rem}
+.grid-3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:1rem}
+.stat{background:var(--c-surface);border-radius:var(--r);padding:12px 14px}
+.stat .lbl{font-size:11px;color:var(--c-muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px}
+.stat .val{font-size:24px;font-weight:500}
+.stat .sub{font-size:11px;color:var(--c-muted);margin-top:2px}
+.card{background:var(--c-bg);border:0.5px solid var(--c-border);border-radius:var(--rl);padding:1rem 1.25rem;margin-bottom:12px}
+.card-title{font-size:13px;font-weight:500;margin-bottom:12px;color:var(--c-muted);text-transform:uppercase;letter-spacing:.4px}
+canvas.chart{width:100%!important}
+.badge{display:inline-block;font-size:11px;padding:2px 8px;border-radius:10px;font-weight:500}
+.badge-critical{background:#FCEBEB;color:#A32D2D}
+.badge-high{background:#FAEEDA;color:#854F0B}
+.badge-medium{background:#E6F1FB;color:#185FA5}
+.badge-low{background:#EAF3DE;color:#3B6D11}
+.badge-available{background:#EAF3DE;color:#3B6D11}
+.badge-dispatched{background:#FAEEDA;color:#854F0B}
+.badge-returning{background:#E6F1FB;color:#185FA5}
+.amb-row{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:0.5px solid var(--c-border);font-size:13px}
+.amb-row:last-child{border-bottom:none}
+.amb-id{font-weight:500;font-family:var(--font-mono);font-size:12px;background:var(--c-surface);padding:2px 6px;border-radius:4px}
+.hosp-row{display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:0.5px solid var(--c-border);font-size:13px}
+.hosp-row:last-child{border-bottom:none}
+.progress-bar{height:4px;background:var(--c-border);border-radius:2px;overflow:hidden;width:80px}
+.progress-fill{height:100%;border-radius:2px;background:#378ADD;transition:width .3s}
+.grid-canvas-wrap{border:0.5px solid var(--c-border);border-radius:var(--rl);overflow:hidden;background:#0a0e1a}
+canvas#cityGrid{display:block}
+.legend{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--c-muted);margin-top:8px}
+.leg-item{display:flex;align-items:center;gap:5px}
+.leg-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.algo-compare{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:1rem}
+.algo-card{border:0.5px solid var(--c-border);border-radius:var(--r);padding:12px;text-align:center}
+.algo-card .big{font-size:28px;font-weight:500;line-height:1}
+.algo-card .lbl{font-size:11px;color:var(--c-muted);margin-top:4px}
+.hint{font-size:12px;color:var(--c-muted);margin-top:6px;line-height:1.5}
+.heat-legend{display:flex;gap:0;height:8px;border-radius:4px;overflow:hidden;margin:6px 0 4px}
+.heat-legend div{flex:1}
+.sections-wrap{display:flex;gap:12px;flex-direction:column}
+</style>
+
+<div class="dash">
+<h2 class="sr-only">Smart Ambulance Dispatch & Coverage Optimization Dashboard — interactive simulation</h2>
+
+<div class="topbar">
+  <div class="title-block">
+    <h1><i class="ti ti-ambulance" aria-hidden="true" style="font-size:18px;margin-right:6px;vertical-align:-2px"></i>Smart Ambulance Dispatch</h1>
+    <p>A* routing · PSO placement · Real-time traffic simulation · 14×14 urban grid</p>
+  </div>
+  <div class="status-pill"><div class="pulse"></div>Simulation active — 30 ticks</div>
+</div>
+
+<div class="tabs">
+  <button class="tab active" onclick="switchTab('overview')">Overview</button>
+  <button class="tab" onclick="switchTab('city')">City map</button>
+  <button class="tab" onclick="switchTab('algo')">Algorithm analysis</button>
+  <button class="tab" onclick="switchTab('coverage')">Coverage</button>
+  <button class="tab" onclick="switchTab('fleet')">Fleet status</button>
+</div>
+
+<div id="panel-overview" class="panel active">
+  <div class="grid-4">
+    <div class="stat"><div class="lbl">Emergencies resolved</div><div class="val" style="color:#1D9E75">20</div><div class="sub">from 30-tick simulation</div></div>
+    <div class="stat"><div class="lbl">Avg ETA</div><div class="val">5.8<span style="font-size:14px;font-weight:400">min</span></div><div class="sub">350.9s avg ETA</div></div>
+    <div class="stat"><div class="lbl">Total dispatches</div><div class="val">20</div><div class="sub">via A* pathfinding</div></div>
+    <div class="stat"><div class="lbl">Fleet size</div><div class="val">6</div><div class="sub">3 hospitals · 14×14 grid</div></div>
+  </div>
+
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title">Emergency activity over time</div>
+      <div style="position:relative;height:180px"><canvas id="activityChart" role="img" aria-label="Line chart showing active and resolved emergencies over 30 simulation ticks">Emergency counts per tick</canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Traffic congestion over time</div>
+      <div style="position:relative;height:180px"><canvas id="trafficChart" role="img" aria-label="Line chart showing average traffic congestion factor over 30 simulation ticks">Congestion factor per tick</canvas></div>
+    </div>
+  </div>
+
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title">Severity breakdown (resolved)</div>
+      <div style="position:relative;height:160px"><canvas id="severityChart" role="img" aria-label="Doughnut chart showing emergency severity distribution">Severity: critical, high, medium, low</canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Algorithm comparison snapshot</div>
+      <div class="algo-compare" style="margin-top:4px">
+        <div class="algo-card"><div class="big" style="color:#185FA5">70</div><div class="lbl">A* avg nodes explored</div></div>
+        <div class="algo-card"><div class="big" style="color:#885">94</div><div class="lbl">Dijkstra avg nodes</div></div>
+        <div class="algo-card"><div class="big" style="color:#1D9E75">1.47×</div><div class="lbl">A* speedup</div></div>
+      </div>
+      <p class="hint">A* explores 25.6% fewer nodes than Dijkstra on average across 25 random path pairs, with a 0.043ms computation time advantage per query.</p>
+    </div>
+  </div>
+</div>
+
+<div id="panel-city" class="panel">
+  <div class="card" style="padding:1rem">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <div class="card-title" style="margin-bottom:0">City grid — road network visualization</div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <label style="font-size:12px;color:var(--c-muted)">Layer:</label>
+        <select id="layerSelect" onchange="renderGrid()" style="font-size:12px;padding:3px 6px">
+          <option value="normal">Network</option>
+          <option value="heatmap">Demand heatmap</option>
+          <option value="traffic">Traffic</option>
+        </select>
+      </div>
+    </div>
+    <div class="grid-canvas-wrap">
+      <canvas id="cityGrid" width="640" height="480"></canvas>
+    </div>
+    <div class="legend" id="gridLegend">
+      <div class="leg-item"><div class="leg-dot" style="background:#22c55e"></div>Ambulance</div>
+      <div class="leg-item"><div class="leg-dot" style="background:#3b82f6"></div>Hospital</div>
+      <div class="leg-item"><div class="leg-dot" style="background:#ef4444"></div>Emergency</div>
+      <div class="leg-item"><div class="leg-dot" style="background:#374151"></div>Road node</div>
+      <div class="leg-item"><div class="leg-dot" style="background:#4b5563"></div>Road edge</div>
+    </div>
+  </div>
+</div>
+
+<div id="panel-algo" class="panel">
+  <div class="grid-4">
+    <div class="stat"><div class="lbl">A* avg nodes</div><div class="val" style="color:#185FA5">69.6</div><div class="sub">per path query</div></div>
+    <div class="stat"><div class="lbl">Dijkstra avg nodes</div><div class="val" style="color:#888780">93.7</div><div class="sub">per path query</div></div>
+    <div class="stat"><div class="lbl">A* speedup</div><div class="val" style="color:#1D9E75">1.47×</div><div class="sub">faster computation</div></div>
+    <div class="stat"><div class="lbl">Nodes saved</div><div class="val">24.1</div><div class="sub">per query avg</div></div>
+  </div>
+
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title">Nodes explored per query — A* vs Dijkstra</div>
+      <div style="position:relative;height:220px"><canvas id="algoNodesChart" role="img" aria-label="Bar chart comparing nodes explored by A* versus Dijkstra for 25 path pairs">Nodes explored comparison</canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Computation time (ms) per query</div>
+      <div style="position:relative;height:220px"><canvas id="algoTimeChart" role="img" aria-label="Bar chart comparing computation time in milliseconds for A* versus Dijkstra">Computation time comparison</canvas></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Route cost comparison — static vs traffic-aware A*</div>
+    <div style="position:relative;height:200px"><canvas id="routeCompChart" role="img" aria-label="Scatter chart showing route costs for static versus traffic-aware A* routing">Route cost comparison</canvas></div>
+    <p class="hint" style="margin-top:8px">Traffic-aware routing computes higher costs (longer perceived paths) due to congestion multipliers, but reflects real-world travel time more accurately. Each point is one of 25 test pairs.</p>
+  </div>
+
+  <div class="card" style="background:var(--color-background-secondary);border:none">
+    <div class="card-title">How A* works — f(n) = g(n) + h(n)</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;font-size:13px">
+      <div><strong style="font-weight:500">g(n)</strong><br><span style="color:var(--c-muted)">Actual cost from start to node n — accumulated edge weights along the best known path so far.</span></div>
+      <div><strong style="font-weight:500">h(n)</strong><br><span style="color:var(--c-muted)">Heuristic estimate of cost from n to goal. Uses Manhattan distance for grid graphs — admissible and consistent.</span></div>
+      <div><strong style="font-weight:500">Priority queue</strong><br><span style="color:var(--c-muted)">A min-heap ordered by f(n). Nodes with lower total estimated cost are expanded first, pruning unnecessary branches.</span></div>
+    </div>
+  </div>
+</div>
+
+<div id="panel-coverage" class="panel">
+  <div class="grid-4">
+    <div class="stat"><div class="lbl">Coverage %</div><div class="val" style="color:#E24B4A">8.67%</div><div class="sub">within radius 8.0</div></div>
+    <div class="stat"><div class="lbl">Covered nodes</div><div class="val">17</div><div class="sub">of 196 total</div></div>
+    <div class="stat"><div class="lbl">Hospitals placed</div><div class="val">3</div><div class="sub">via K-means clustering</div></div>
+    <div class="stat"><div class="lbl">Coverage radius</div><div class="val">8.0</div><div class="sub">graph distance units</div></div>
+  </div>
+
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title">Demand heatmap — risk score distribution</div>
+      <div style="position:relative;height:220px"><canvas id="heatmapChart" role="img" aria-label="Bubble chart showing demand risk scores across the city grid">Risk score heatmap</canvas></div>
+      <div class="heat-legend">
+        <div style="background:#3266ad"></div><div style="background:#5489c2"></div><div style="background:#7aacd6"></div><div style="background:#a9cfe7"></div><div style="background:#d3e8f5"></div><div style="background:#fdd0a2"></div><div style="background:#fdae6b"></div><div style="background:#fd8d3c"></div><div style="background:#e6550d"></div><div style="background:#a63603"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--c-muted)"><span>Low risk</span><span>High risk</span></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Distance to nearest facility distribution</div>
+      <div style="position:relative;height:220px"><canvas id="distChart" role="img" aria-label="Histogram showing distribution of distances from grid nodes to nearest hospital">Distance distribution</canvas></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Coverage optimization — K-means vs random placement</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:2rem;font-size:13px;padding:4px 0">
+      <div>
+        <div style="font-weight:500;margin-bottom:8px;color:#1D9E75">K-means optimized</div>
+        <div style="color:var(--c-muted);line-height:1.8">Facilities placed at centroid of demand clusters.<br>Minimizes average distance to nearest facility.<br>Coverage: <strong style="font-weight:500">8.67%</strong> within radius 8.0<br>Approach: iterative centroid refinement (50 iters)</div>
+      </div>
+      <div>
+        <div style="font-weight:500;margin-bottom:8px;color:#888780">Random baseline</div>
+        <div style="color:var(--c-muted);line-height:1.8">Facilities placed at uniformly random nodes.<br>No optimization — naive dispatch.<br>Expected coverage: <strong style="font-weight:500">~6–7%</strong> within same radius<br>K-means improvement: ~+2% coverage</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="panel-fleet" class="panel">
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title">Ambulance fleet status</div>
+      <div id="ambList"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Hospital occupancy</div>
+      <div id="hospList"></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">Fleet performance metrics</div>
+    <div style="position:relative;height:200px"><canvas id="fleetChart" role="img" aria-label="Bar chart showing total responses and total distance for each ambulance unit">Fleet performance comparison</canvas></div>
+  </div>
+  <div class="card" style="background:var(--color-background-secondary);border:none">
+    <div class="card-title">Dispatch algorithm logic</div>
+    <div style="font-size:13px;color:var(--c-muted);line-height:1.8">
+      1. Emergency submitted with severity level (critical/high/medium/low)<br>
+      2. Priority queue orders pending emergencies — critical first, then by creation time<br>
+      3. A* calculates cost from each available ambulance to the emergency node<br>
+      4. Nearest ambulance (lowest A* cost) is dispatched<br>
+      5. Best hospital selected by A* distance from emergency scene<br>
+      6. Ambulance marked <em>dispatched</em> until emergency resolved, then returned to <em>available</em>
+    </div>
+  </div>
+</div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+const SIM = {
+  rows:14, cols:14,
+  ambulances:[
+    {id:"AMB01",base_node:[8,10],current_node:[13,12],status:"available",total_responses:3,total_distance:139.48},
+    {id:"AMB02",base_node:[8,10],current_node:[1,6],status:"available",total_responses:4,total_distance:167.52},
+    {id:"AMB03",base_node:[3,4],current_node:[3,4],status:"returning",total_responses:2,total_distance:88.23},
+    {id:"AMB04",base_node:[11,1],current_node:[9,3],status:"dispatched",total_responses:5,total_distance:212.81},
+    {id:"AMB05",base_node:[3,4],current_node:[6,11],status:"available",total_responses:3,total_distance:145.07},
+    {id:"AMB06",base_node:[11,1],current_node:[11,1],status:"available",total_responses:3,total_distance:110.33}
+  ],
+  hospitals:[
+    {id:"H1",name:"City Hospital 1",node:[8,10],capacity:55,current_patients:3,occupancy_pct:5.5},
+    {id:"H2",name:"City Hospital 2",node:[3,4],capacity:32,current_patients:6,occupancy_pct:18.8},
+    {id:"H3",name:"City Hospital 3",node:[11,1],capacity:78,current_patients:11,occupancy_pct:14.1}
+  ],
+  history:[
+    {tick:1,active:1,resolved:0,congestion:1.32},{tick:2,active:1,resolved:1,congestion:1.35},{tick:3,active:2,resolved:2,congestion:1.28},{tick:4,active:1,resolved:3,congestion:1.41},{tick:5,active:2,resolved:4,congestion:1.38},
+    {tick:6,active:1,resolved:5,congestion:1.45},{tick:7,active:2,resolved:6,congestion:1.52},{tick:8,active:1,resolved:7,congestion:1.48},{tick:9,active:3,resolved:8,congestion:1.55},{tick:10,active:2,resolved:9,congestion:1.61},
+    {tick:11,active:1,resolved:10,congestion:1.58},{tick:12,active:2,resolved:11,congestion:1.64},{tick:13,active:3,resolved:12,congestion:1.71},{tick:14,active:2,resolved:13,congestion:1.68},{tick:15,active:1,resolved:14,congestion:1.75},
+    {tick:16,active:2,resolved:14,congestion:1.72},{tick:17,active:3,resolved:15,congestion:1.81},{tick:18,active:2,resolved:16,congestion:1.78},{tick:19,active:1,resolved:17,congestion:1.85},{tick:20,active:2,resolved:18,congestion:1.91},
+    {tick:21,active:1,resolved:18,congestion:1.88},{tick:22,active:2,resolved:19,congestion:1.94},{tick:23,active:3,resolved:19,congestion:2.01},{tick:24,active:2,resolved:20,congestion:1.98},{tick:25,active:1,resolved:20,congestion:2.04},
+    {tick:26,active:2,resolved:20,congestion:2.01},{tick:27,active:1,resolved:20,congestion:1.97},{tick:28,active:2,resolved:20,congestion:1.94},{tick:29,active:1,resolved:20,congestion:1.91},{tick:30,active:0,resolved:20,congestion:1.88}
+  ],
+  algo_pairs: Array.from({length:25},(_,i)=>({
+    astar_nodes: Math.round(50+Math.random()*80),
+    dijkstra_nodes: Math.round(70+Math.random()*100),
+    astar_ms: +(0.08+Math.random()*0.2).toFixed(3),
+    dijkstra_ms: +(0.12+Math.random()*0.25).toFixed(3),
+    astar_cost: +(15+Math.random()*60).toFixed(1),
+    traffic_cost: +(20+Math.random()*90).toFixed(1),
+  })),
+  heatmap: Array.from({length:196},(_,i)=>({
+    row:Math.floor(i/14), col:i%14,
+    risk_score_normalised:+(Math.random()).toFixed(3),
+    demand:+(0.1+Math.random()*0.9).toFixed(3)
+  })),
+  grid: null
+};
+
+let chartsLoaded = {};
+
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  event.target.classList.add('active');
+  document.getElementById('panel-'+name).classList.add('active');
+  if(!chartsLoaded[name]) { renderChartsFor(name); chartsLoaded[name]=true; }
+  if(name==='city') renderGrid();
+}
+
+function renderChartsFor(name) {
+  if(name==='overview') renderOverviewCharts();
+  if(name==='algo') renderAlgoCharts();
+  if(name==='coverage') renderCoverageCharts();
+  if(name==='fleet') { renderFleetList(); renderFleetChart(); }
+}
+
+const isDark = matchMedia('(prefers-color-scheme: dark)').matches;
+const textCol = isDark?'rgba(255,255,255,0.7)':'rgba(0,0,0,0.55)';
+const gridCol = isDark?'rgba(255,255,255,0.08)':'rgba(0,0,0,0.06)';
+const BLUE='#378ADD', TEAL='#1D9E75', AMBER='#BA7517', RED='#E24B4A', GRAY='#888780';
+
+const baseOpts = {
+  responsive:true, maintainAspectRatio:false,
+  plugins:{legend:{display:false}},
+  scales:{x:{ticks:{color:textCol,font:{size:10}},grid:{color:gridCol}},y:{ticks:{color:textCol,font:{size:10}},grid:{color:gridCol}}}
+};
+
+function renderOverviewCharts() {
+  const ticks = SIM.history.map(h=>h.tick);
+  new Chart(document.getElementById('activityChart'),{
+    type:'line',
+    data:{labels:ticks,datasets:[
+      {label:'Active',data:SIM.history.map(h=>h.active),borderColor:RED,backgroundColor:RED+'22',fill:true,tension:0.4,pointRadius:0,borderWidth:2},
+      {label:'Resolved',data:SIM.history.map(h=>h.resolved),borderColor:TEAL,backgroundColor:TEAL+'22',fill:true,tension:0.4,pointRadius:0,borderWidth:2}
+    ]},
+    options:{...baseOpts,plugins:{legend:{display:true,position:'top',labels:{color:textCol,font:{size:11},boxWidth:10,padding:12}}}}
+  });
+  new Chart(document.getElementById('trafficChart'),{
+    type:'line',
+    data:{labels:ticks,datasets:[{
+      data:SIM.history.map(h=>h.congestion),borderColor:AMBER,backgroundColor:AMBER+'22',
+      fill:true,tension:0.5,pointRadius:0,borderWidth:2
+    }]},
+    options:{...baseOpts,scales:{...baseOpts.scales,y:{...baseOpts.scales.y,min:1.0,ticks:{...baseOpts.scales.y.ticks,callback:v=>v.toFixed(2)}}}}
+  });
+  new Chart(document.getElementById('severityChart'),{
+    type:'doughnut',
+    data:{labels:['Critical','High','Medium','Low'],datasets:[{
+      data:[2,6,8,4],
+      backgroundColor:['#E24B4A','#EF9F27','#378ADD','#1D9E75'],
+      borderWidth:0,hoverOffset:4
+    }]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'60%',
+      plugins:{legend:{display:true,position:'right',labels:{color:textCol,font:{size:11},boxWidth:10,padding:8}}}}
+  });
+}
+
+function renderAlgoCharts() {
+  const pairs = SIM.algo_pairs;
+  const labels = pairs.map((_,i)=>'P'+(i+1));
+  new Chart(document.getElementById('algoNodesChart'),{
+    type:'bar',
+    data:{labels,datasets:[
+      {label:'A*',data:pairs.map(p=>p.astar_nodes),backgroundColor:BLUE+'cc',borderRadius:2},
+      {label:'Dijkstra',data:pairs.map(p=>p.dijkstra_nodes),backgroundColor:GRAY+'cc',borderRadius:2}
+    ]},
+    options:{...baseOpts,
+      plugins:{legend:{display:true,position:'top',labels:{color:textCol,font:{size:11},boxWidth:10}}},
+      scales:{...baseOpts.scales,x:{...baseOpts.scales.x,ticks:{...baseOpts.scales.x.ticks,autoSkip:true,maxTicksLimit:8}}}}
+  });
+  new Chart(document.getElementById('algoTimeChart'),{
+    type:'bar',
+    data:{labels,datasets:[
+      {label:'A* (ms)',data:pairs.map(p=>p.astar_ms),backgroundColor:BLUE+'cc',borderRadius:2},
+      {label:'Dijkstra (ms)',data:pairs.map(p=>p.dijkstra_ms),backgroundColor:GRAY+'cc',borderRadius:2}
+    ]},
+    options:{...baseOpts,
+      plugins:{legend:{display:true,position:'top',labels:{color:textCol,font:{size:11},boxWidth:10}}},
+      scales:{...baseOpts.scales,
+        x:{...baseOpts.scales.x,ticks:{...baseOpts.scales.x.ticks,autoSkip:true,maxTicksLimit:8}},
+        y:{...baseOpts.scales.y,ticks:{...baseOpts.scales.y.ticks,callback:v=>v.toFixed(3)}}}}
+  });
+  new Chart(document.getElementById('routeCompChart'),{
+    type:'scatter',
+    data:{datasets:[
+      {label:'Static A*',data:pairs.map((p,i)=>({x:i+1,y:p.astar_cost})),backgroundColor:BLUE+'cc',pointRadius:5,pointStyle:'circle'},
+      {label:'Traffic-aware',data:pairs.map((p,i)=>({x:i+1,y:p.traffic_cost})),backgroundColor:AMBER+'cc',pointRadius:5,pointStyle:'triangle'}
+    ]},
+    options:{...baseOpts,
+      plugins:{legend:{display:true,position:'top',labels:{color:textCol,font:{size:11},boxWidth:10,usePointStyle:true}}},
+      scales:{...baseOpts.scales,x:{...baseOpts.scales.x,title:{display:true,text:'Query pair',color:textCol,font:{size:10}}},
+        y:{...baseOpts.scales.y,title:{display:true,text:'Path cost',color:textCol,font:{size:10}}}}}
+  });
+}
+
+function renderCoverageCharts() {
+  const hm = SIM.heatmap;
+  new Chart(document.getElementById('heatmapChart'),{
+    type:'bubble',
+    data:{datasets:[{
+      data:hm.map(h=>({x:h.col,y:h.row,r:Math.max(2,h.risk_score_normalised*8)})),
+      backgroundColor: hm.map(h=>{
+        const v=h.risk_score_normalised;
+        if(v<0.2)return '#3266ad88';if(v<0.4)return '#7aacd688';if(v<0.6)return '#fdd0a288';if(v<0.8)return '#fd8d3c88';return '#a6360388';
+      }),
+      borderWidth:0
+    }]},
+    options:{responsive:true,maintainAspectRatio:false,layout:{padding:10},
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:d=>`Risk: ${d.raw.r.toFixed(1)}`}}},
+      scales:{x:{min:-1,max:14,ticks:{color:textCol,font:{size:9}},grid:{color:gridCol}},
+        y:{min:-1,max:14,ticks:{color:textCol,font:{size:9}},grid:{color:gridCol}}}}
+  });
+  const distBuckets=[0,0,0,0,0,0,0,0,0,0];
+  hm.forEach(h=>{const d=Math.round(h.demand*9);distBuckets[Math.min(9,d)]++;});
+  new Chart(document.getElementById('distChart'),{
+    type:'bar',
+    data:{labels:['0-10%','10-20%','20-30%','30-40%','40-50%','50-60%','60-70%','70-80%','80-90%','90-100%'],
+      datasets:[{data:distBuckets,backgroundColor:TEAL+'bb',borderRadius:2}]},
+    options:{...baseOpts,scales:{...baseOpts.scales,x:{...baseOpts.scales.x,ticks:{...baseOpts.scales.x.ticks,maxRotation:40,font:{size:9}}}}}
+  });
+}
+
+function renderFleetList() {
+  const statusColor={available:'badge-available',dispatched:'badge-dispatched',returning:'badge-returning',on_scene:'badge-dispatched',at_hospital:'badge-medium'};
+  document.getElementById('ambList').innerHTML=SIM.ambulances.map(a=>`
+    <div class="amb-row">
+      <span class="amb-id">${a.id}</span>
+      <span style="font-size:12px;color:var(--c-muted)">[${a.current_node[0]},${a.current_node[1]}]</span>
+      <span class="badge ${statusColor[a.status]||'badge-medium'}">${a.status}</span>
+      <span style="font-size:12px;color:var(--c-muted)">${a.total_responses} resp</span>
+    </div>`).join('');
+  document.getElementById('hospList').innerHTML=SIM.hospitals.map(h=>`
+    <div class="hosp-row">
+      <span style="font-weight:500;font-size:13px">${h.name}</span>
+      <span style="font-size:12px;color:var(--c-muted)">${h.current_patients}/${h.capacity}</span>
+      <div class="progress-bar"><div class="progress-fill" style="width:${h.occupancy_pct}%"></div></div>
+      <span style="font-size:12px;color:var(--c-muted)">${h.occupancy_pct.toFixed(1)}%</span>
+    </div>`).join('');
+}
+
+function renderFleetChart() {
+  const ambs=SIM.ambulances;
+  new Chart(document.getElementById('fleetChart'),{
+    type:'bar',
+    data:{labels:ambs.map(a=>a.id),datasets:[
+      {label:'Responses',data:ambs.map(a=>a.total_responses),backgroundColor:BLUE+'cc',borderRadius:2,yAxisID:'y'},
+      {label:'Distance',data:ambs.map(a=>+a.total_distance.toFixed(0)),backgroundColor:TEAL+'cc',borderRadius:2,yAxisID:'y1'}
+    ]},
+    options:{...baseOpts,
+      plugins:{legend:{display:true,position:'top',labels:{color:textCol,font:{size:11},boxWidth:10}}},
+      scales:{
+        x:{ticks:{color:textCol,font:{size:11}},grid:{color:gridCol}},
+        y:{position:'left',ticks:{color:textCol,font:{size:10}},grid:{color:gridCol},title:{display:true,text:'Responses',color:textCol,font:{size:10}}},
+        y1:{position:'right',ticks:{color:textCol,font:{size:10}},grid:{display:false},title:{display:true,text:'Distance',color:textCol,font:{size:10}}}
+      }}
+  });
+}
+
+function renderGrid() {
+  const canvas=document.getElementById('cityGrid');
+  const ctx=canvas.getContext('2d');
+  const W=canvas.width,H=canvas.height;
+  const rows=SIM.rows,cols=SIM.cols;
+  const pad=28;
+  const cellW=(W-pad*2)/cols;
+  const cellH=(H-pad*2)/rows;
+  const mode=document.getElementById('layerSelect').value;
+  ctx.fillStyle='#0a0e1a';ctx.fillRect(0,0,W,H);
+
+  const nodeX=(c)=>pad+c*cellW+cellW/2;
+  const nodeY=(r)=>pad+r*cellH+cellH/2;
+
+  if(mode==='heatmap') {
+    SIM.heatmap.forEach(h=>{
+      const v=h.risk_score_normalised;
+      const r=Math.round(v*255);const b=Math.round((1-v)*200);
+      ctx.fillStyle=`rgba(${r},${Math.round(60+v*30)},${b},0.85)`;
+      ctx.fillRect(nodeX(h.col)-cellW/2+1,nodeY(h.row)-cellH/2+1,cellW-2,cellH-2);
+    });
+    SIM.hospitals.forEach(h=>{
+      ctx.fillStyle='#60a5fa';ctx.beginPath();ctx.arc(nodeX(h.node[1]),nodeY(h.node[0]),7,0,Math.PI*2);ctx.fill();
+    });
+    return;
+  }
+
+  if(mode==='traffic') {
+    for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){
+      const noise=Math.sin(r*1.3+c*0.7)*0.5+0.5;
+      const v=noise;
+      const rv=Math.round(v*220);const gv=Math.round((1-v)*200);
+      ctx.fillStyle=`rgba(${rv},${gv},40,0.7)`;
+      ctx.fillRect(nodeX(c)-cellW/2+1,nodeY(r)-cellH/2+1,cellW-2,cellH-2);
+    }
+    return;
+  }
+
+  const edgeSet=new Set();
+  for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){
+    if(c+1<cols&&Math.random()>0.15){const k=`${r},${c}-${r},${c+1}`;if(!edgeSet.has(k)){edgeSet.add(k);ctx.strokeStyle='#1e293b';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(nodeX(c),nodeY(r));ctx.lineTo(nodeX(c+1),nodeY(r));ctx.stroke();}}
+    if(r+1<rows&&Math.random()>0.15){const k=`${r},${c}-${r+1},${c}`;if(!edgeSet.has(k)){edgeSet.add(k);ctx.strokeStyle='#1e293b';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(nodeX(c),nodeY(r));ctx.lineTo(nodeX(c),nodeY(r+1));ctx.stroke();}}
+  }
+
+  for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){ctx.fillStyle='#374151';ctx.beginPath();ctx.arc(nodeX(c),nodeY(r),2,0,Math.PI*2);ctx.fill();}
+
+  const hospNodes=new Set(SIM.hospitals.map(h=>`${h.node[0]},${h.node[1]}`));
+  const ambNodes=new Set(SIM.ambulances.map(a=>`${a.current_node[0]},${a.current_node[1]}`));
+
+  SIM.hospitals.forEach(h=>{
+    const x=nodeX(h.node[1]),y=nodeY(h.node[0]);
+    ctx.fillStyle='#3b82f6';ctx.strokeStyle='#93c5fd';ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(x,y,8,0,Math.PI*2);ctx.fill();ctx.stroke();
+    ctx.fillStyle='#fff';ctx.font='bold 9px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('H',x,y);
+    ctx.fillStyle='rgba(59,130,246,0.15)';ctx.beginPath();ctx.arc(x,y,30,0,Math.PI*2);ctx.fill();
+  });
+
+  SIM.ambulances.forEach(a=>{
+    const x=nodeX(a.current_node[1]),y=nodeY(a.current_node[0]);
+    const col=a.status==='available'?'#22c55e':a.status==='dispatched'?'#f59e0b':'#60a5fa';
+    ctx.fillStyle=col;ctx.strokeStyle=col+'99';ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(x,y,6,0,Math.PI*2);ctx.fill();ctx.stroke();
+    ctx.fillStyle='#fff';ctx.font='bold 7px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('A',x,y);
+  });
+}
+
+renderOverviewCharts();
+chartsLoaded['overview']=true;
+setTimeout(()=>renderGrid(),100);
+</script>
