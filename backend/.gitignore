@@ -8,3 +8,5 @@
 .DS_Store
 Thumbs.db  
 /cache 
+*.osm.pbf
+backend/app/data/maps/
