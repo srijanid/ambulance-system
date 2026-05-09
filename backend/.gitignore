@@ -6,4 +6,5 @@
 !.env.example
 !.env.test
 .DS_Store
-Thumbs.db   
+Thumbs.db  
+/cache 

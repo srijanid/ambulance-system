@@ -12,13 +12,46 @@ import random
 
 from app.simulation.engine import SimulationEngine
 from app.dispatch.engine import Severity
+from app.data.osm_loader import load_osm_graph, convert_osm_to_astar_graph
+import os
 
-# ---------------------------------------------------------------------------
+BASE_DIR = os.path.dirname(__file__)
+
+GRAPHML_PATH = os.path.join(
+    BASE_DIR,
+    "data",
+    "processed",
+    "eastern-zone.graphml"
+)
+
+# Global variables (initialized in startup)
+osm_graph = None
+road_graph = None
+
+# Initialize FastAPI app
 app = FastAPI(
     title="Smart Ambulance Dispatch API",
     description="A* routing, PSO placement, real-time traffic simulation",
     version="2.0.0",
 )
+
+
+# ---------------------------------------------------------------------------
+# LOAD ON STARTUP (BEST PRACTICE)
+# ---------------------------------------------------------------------------
+@app.on_event("startup")
+def startup_event():
+    global osm_graph, road_graph
+
+    print("Loading OSM graph...")
+    if not os.path.exists(GRAPHML_PATH):
+        raise RuntimeError(f"GraphML file not found at {GRAPHML_PATH}. Run convert_osm.py first!")
+    
+    osm_graph = load_osm_graph(GRAPHML_PATH)
+    road_graph = convert_osm_to_astar_graph(osm_graph)
+
+    print("✓ OSM graph loaded, ready for routing")
+
 
 app.add_middleware(
     CORSMiddleware,
