@@ -9,11 +9,23 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from typing import Any, Dict, List, Optional
 import random
+import networkx as nx
+from fastapi.responses import JSONResponse
+from app.algorithms.astar import astar
 
 from app.simulation.engine import SimulationEngine
 from app.dispatch.engine import Severity
 from app.data.osm_loader import load_osm_graph, convert_osm_to_astar_graph
 import os
+import osmnx as ox
+from app.dispatch.pso_optimizer import PSOFacilityOptimizer
+
+from app.data.osm_loader import (
+    load_osm_graph,
+    convert_osm_to_astar_graph,
+    prepare_route_nodes,
+    osm_heuristic
+)
 
 BASE_DIR = os.path.dirname(__file__)
 
@@ -339,3 +351,182 @@ def get_analytics():
         "coverage": _sim.coverage_data,
         "ticks_elapsed": _sim.tick_count,
     }
+
+
+@app.get("/osm/graph")
+def get_osm_graph():
+
+    nodes = []
+    edges = []
+
+    for node_id, data in osm_graph.nodes(data=True):
+
+        nodes.append({
+            "id": str(node_id),
+            "lat": data["y"],
+            "lng": data["x"],
+        })
+
+    added = set()
+
+    for u, v, data in osm_graph.edges(data=True):
+
+        key = (u, v)
+
+        if key in added:
+            continue
+
+        added.add(key)
+
+        try:
+
+            u_data = osm_graph.nodes[u]
+            v_data = osm_graph.nodes[v]
+
+            edges.append({
+                "source": str(u),
+                "target": str(v),
+                "coordinates": [
+                    [u_data["y"], u_data["x"]],
+                    [v_data["y"], v_data["x"]],
+                ]
+            })
+
+        except:
+            pass
+
+    return {
+        "nodes": nodes,
+        "edges": edges
+    }
+
+
+@app.get("/osm/route")
+def get_route(start: str, end: str):
+
+    global road_graph
+    global osm_graph
+
+    if road_graph is None:
+        raise HTTPException(status_code=500, detail="Road graph not loaded")
+
+    result = astar(
+        road_graph,
+        start,
+        end,
+        heuristic_fn=lambda a, b: 0
+    )
+
+    if not result.path:
+        raise HTTPException(status_code=404, detail="No route found")
+
+    coordinates = []
+
+    for node in result.path:
+        data = osm_graph.nodes[int(node)]
+
+        coordinates.append([
+            data.get("y"),
+            data.get("x")
+        ])
+
+    return {
+        "path": result.path,
+        "coordinates": coordinates,
+        "cost": result.cost
+    }
+
+
+@app.get("/osm/facilities")
+def osm_facilities():
+
+    optimizer = PSOFacilityOptimizer(
+        osm_graph,
+        num_facilities=10,
+        num_particles=15,
+        iterations=20
+    )
+
+    best_nodes = optimizer.optimize()
+
+    facilities = []
+
+    for node in best_nodes:
+
+        n = osm_graph.nodes[node]
+
+        facilities.append({
+            "id": str(node),
+            "lat": n["y"],
+            "lng": n["x"]
+        })
+
+    return {
+        "facilities": facilities
+    }
+
+
+
+@app.get("/osm/nearest-route")
+def nearest_route(
+    start_lat: float,
+    start_lng: float,
+    end_lat: float,
+    end_lng: float
+):
+
+    try:
+
+        start_node, end_node = prepare_route_nodes(
+            osm_graph,
+            start_lat,
+            start_lng,
+            end_lat,
+            end_lng
+        )
+
+        print("START NODE:", start_node)
+        print("END NODE:", end_node)
+
+        if start_node == end_node:
+
+            return {
+                "coordinates": [
+                    [start_lat, start_lng],
+                    [end_lat, end_lng]
+                ]
+            }
+
+        route = nx.astar_path(
+            osm_graph,
+            start_node,
+            end_node,
+            heuristic=lambda a, b: osm_heuristic(a, b, osm_graph),
+            weight="length"
+        )
+
+        coords = []
+
+        for node in route:
+
+            n = osm_graph.nodes[node]
+
+            coords.append([
+                n["y"],
+                n["x"]
+            ])
+
+        return {
+            "coordinates": coords
+        }
+
+    except Exception as e:
+
+        print("ROUTE ERROR:", str(e))
+
+        return {
+            "coordinates": [
+                [start_lat, start_lng],
+                [end_lat, end_lng]
+            ]
+        }

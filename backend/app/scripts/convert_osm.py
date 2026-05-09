@@ -70,7 +70,7 @@ try:
                     raise Exception(f"Both methods failed! City: {city_err}, Bbox: {bbox_err}")
 
     print("Step 2: Projecting graph...")
-    G = ox.project_graph(G)
+    
 
     GRAPHML_PATH.parent.mkdir(parents=True, exist_ok=True)
 
